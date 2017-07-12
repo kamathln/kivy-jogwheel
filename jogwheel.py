@@ -125,8 +125,8 @@ class JogWheelRenderer(Widget ):
         super(JogWheelRenderer,self).__init__( *args, **kwargs)
 
         with self.canvas:
-            #Color(0.3,0.3,0.3,1)
-            #self.rect = RoundedRectangle() 
+            Color(0.3,0.3,0.3,1)
+            self.rect = RoundedRectangle() 
             #Color(0.5,0.5,0.55,1)
             #self.rect2 = RoundedRectangle()
 
