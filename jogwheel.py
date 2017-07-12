@@ -25,7 +25,7 @@
 from kivy.properties import *
 from kivy.metrics import  *
 from kivy.event import EventDispatcher
-from kivy.graphics import Color, RoundedRectangle
+from kivy.graphics import Color, RoundedRectangle, Rectangle
 from kivy.uix.widget import Widget
 from kivy.uix.boxlayout import BoxLayout
 import kivy.uix.behaviors 
@@ -59,14 +59,14 @@ class JogWheelBehavior(object):
         sign= 0 if self.dsx_collector==0 else (self.dsx_collector/abs(self.dsx_collector))
         while abs(self.dsx_collector) > self.trigger_distance:
             self.dsx_collector -= sign * self.trigger_distance
-            self.dispatch('on_jog', sign)
+            self.dispatch('on_jog',self, sign)
 
     def slide_y(self,event):
         self.dsy_collector += event.dy
         sign= 0 if self.dsy_collector==0 else (self.dsy_collector/abs(self.dsy_collector)) 
         while abs(self.dsy_collector) > self.trigger_distance:
             self.dsy_collector -= sign * self.trigger_distance
-            self.dispatch('on_jog', sign)
+            self.dispatch('on_jog',self, sign)
 
     def on_orientation(self, val, *args):
         if self.orientation == 'horizontal':
@@ -84,56 +84,73 @@ class JogWheelBehavior(object):
         self.dsx_collector=0
         self.dsy_collector=0
 
-class NumericJogWheelBehavior(EventDispatcher,JogWheelBehavior):
+class NumericJogWheelBehavior(JogWheelBehavior):
     value = NumericProperty(0)
     minimum = NumericProperty(-1.0)
     maximum = NumericProperty(+1.0)
     step = NumericProperty(0.1)
 
-    def on_jog(self, direction):
+    def do_jog(self, o, o2, direction):
         value = self.value
         value += direction * self.step
         value = value if value >= self.minimum else self.minimum 
         value = value if value <= self.maximum else self.maximum
         self.value = value
 
+    def __init__(self, *args, **kwargs):
+        super(NumericJogWheelBehavior,self).__init__(*args, **kwargs)
+        self.bind(on_jog=self.do_jog)
+
 
 class JogWheelRenderer(Widget ):
     thickness = NumericProperty(cm(1))
-    def update_dims(self):
-        if self.orientation == 'horizontal':
-            self.rect.size=(self.width, self.thickness)
-            #self.rect2.size=(self.width -4, self.thickness -4)
-            self.rect.pos = [0, (self.height - self.thickness)/2.0]
-            #self.rect2.pos = [1.0, ((self.height - self.thickness)/2.0)+2.0]
-        else:
-            self.rect.size=(self.thickness, self.height)
-            #self.rect2.size=(self.thickness-4, self.height-4)
-            self.rect.pos = [(self.width - self.thickness)/2.0, 0]
-            #self.rect2.pos = [((self.width - self.thickness)/2.0) +2, 1.0]
-
-    def on_size(self, o, size):
-        self.update_dims()
-
-    def on_pos(self, o, pos):
-        self.update_dims()
-
-    def on_thickness(self, o, pos):
-        self.update_dims()
+    graded = BooleanProperty(True)
+    def update_dims(self, *args):
+        print "renderer:", self.pos, self.size, self.thickness, self.orientation
+        inited=True
+        try:
+            self.rect
+        except:
+            inited = False
+        if inited:
+            if self.orientation == 'horizontal':
+                self.rect.size=(self.width, self.thickness)
+                self.rect.pos = [0, (self.height - self.thickness)/2.0]
+                if self.graded:
+                    self.rect.source = 'JogWheel_graded_horizontal.jpg'
+                else:
+                    self.rect.source = 'JogWheel_ungraded_horizontal.jpg'
+            else:
+                self.rect.size=(self.thickness, self.height)
+                self.rect.pos = [(self.width - self.thickness)/2.0, 0]
+                if self.graded:
+                    self.rect.source = 'JogWheel_graded_vertical.jpg'
+                else:
+                    self.rect.source = 'JogWheel_ungraded_vertical.jpg'
 
     def __init__(self, *args, **kwargs):
         super(JogWheelRenderer,self).__init__( *args, **kwargs)
 
         with self.canvas:
-            Color(0.3,0.3,0.3,1)
-            self.rect = RoundedRectangle() 
-            #Color(0.5,0.5,0.55,1)
-            #self.rect2 = RoundedRectangle()
+            #Color(0.6,0.6,0.6,.7)
+            self.rect = Rectangle()
+
+        self.bind(size = self.update_dims,
+                  pos  = self.update_dims,
+                  thickness   = self.update_dims,
+                  orientation = self.update_dims)
+
+        self.update_dims()
+
 
 class JogWheel(JogWheelRenderer, JogWheelBehavior):
-    pass
+    def on_orientation(self, o, orientation):
+        JogWheelBehavior.on_orientation(self, o, orientation)
+    
 
 class NumericJogWheel(JogWheelRenderer, NumericJogWheelBehavior):
+    def on_orientation(self, o, orientation):
+        JogWheelBehavior.on_orientation(self, o, orientation)
     pass
 
 
@@ -148,11 +165,13 @@ if __name__ == '__main__':
             lbl = Label(text='')
             def updatelbl(o,direction):
                 lbl.text='Direction: %d, Time %.2f' % (direction, o.value)
-            j = NumericJogWheel(orientation='vertical', 
-                                minimum=-2, 
-                                maximum=2, 
-                                on_jog=updatelbl,
-                                trigger_distance = cm(0.3))
+            j = NumericJogWheel()
+            j.minimum = -2
+            j.maximum = 2 
+            j.trigger_distance = cm(0.3)
+            j.on_jog = updatelbl
+            j.orientation = 'vertical'
+            j.graded = False
                 
             b.add_widget(j)
             b.add_widget(lbl)
