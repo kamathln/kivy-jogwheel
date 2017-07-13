@@ -30,8 +30,11 @@ from kivy.uix.widget import Widget
 from kivy.uix.boxlayout import BoxLayout
 import kivy.uix.behaviors 
 import kivy.uix 
+import kivy.resources
+import kivy.resources
+import os
 
-
+jogger_res_path=os.path.basename(__file__)
 
 class JogWheelBehavior(object):
     trigger_distance = NumericProperty(4)
@@ -39,19 +42,24 @@ class JogWheelBehavior(object):
 
     def __init__(self, *args, **kwargs):
         super(JogWheelBehavior, self).__init__(*args,**kwargs)
-        self.on_orientation(self, self.orientation)
+        self.do_orientation(self, self.orientation)
         self.dsx_collector=0
         self.dsy_collector=0
 
         self.register_event_type('on_jog')
 
+        self.bind(on_touch_down=self.register_touch)
         self.bind(on_touch_move=self.slide)
         self.bind(on_touch_up=self.unregister_touch)
+        self.bind(orientation=self.do_orientation)
 
-    def register_touch(self, touch):
-        touch.grab(self)
+    def register_touch(self, o, touch):
+        if self.collide_point(touch.x, touch.y):
+            touch.grab(self)
 
     def slide(self,o,event):
+        if not event.grab_current is self:
+            return True
         self._slide(event)
     
     def slide_x(self,event):
@@ -59,22 +67,22 @@ class JogWheelBehavior(object):
         sign= 0 if self.dsx_collector==0 else (self.dsx_collector/abs(self.dsx_collector))
         while abs(self.dsx_collector) > self.trigger_distance:
             self.dsx_collector -= sign * self.trigger_distance
-            self.dispatch('on_jog',self, sign)
+            self.dispatch('on_jog', self, sign)
 
     def slide_y(self,event):
         self.dsy_collector += event.dy
         sign= 0 if self.dsy_collector==0 else (self.dsy_collector/abs(self.dsy_collector)) 
         while abs(self.dsy_collector) > self.trigger_distance:
             self.dsy_collector -= sign * self.trigger_distance
-            self.dispatch('on_jog',self, sign)
+            self.dispatch('on_jog', self, sign)
 
-    def on_orientation(self, val, *args):
+    def do_orientation(self, val, *args):
         if self.orientation == 'horizontal':
             self._slide = self.slide_x
         else:
             self._slide = self.slide_y
              
-    def on_jog(self, val):
+    def on_jog(self, obj, val):
         pass
 
     def unregister_touch(self, o, event):
@@ -103,33 +111,41 @@ class NumericJogWheelBehavior(JogWheelBehavior):
 
 
 class JogWheelRenderer(Widget ):
-    thickness = NumericProperty(cm(1))
+    thickness = NumericProperty(cm(0.2))
     graded = BooleanProperty(True)
     def update_dims(self, *args):
-        print "renderer:", self.pos, self.size, self.thickness, self.orientation
+        print "Update_dims:", self.pos, self.size, self.thickness, self.orientation
         inited=True
         try:
             self.rect
         except:
             inited = False
+        bdir = os.path.dirname(__file__)
+        bdir = bdir if bdir else os.path.curdir
         if inited:
             if self.orientation == 'horizontal':
                 self.rect.size=(self.width, self.thickness)
-                self.rect.pos = [0, (self.height - self.thickness)/2.0]
+                self.rect.pos = [self.x+0, self.y+((self.height - self.thickness)/2.0)]
                 if self.graded:
-                    self.rect.source = 'JogWheel_graded_horizontal.jpg'
+                    fpath= os.path.sep.join([bdir,'JogWheel_graded_horizontal.jpg'])
+                    self.rect.source = fpath
+
                 else:
-                    self.rect.source = 'JogWheel_ungraded_horizontal.jpg'
+                    fpath = os.path.sep.join([bdir,'JogWheel_ungraded_horizontal.jpg'])
+                    self.rect.source = fpath
             else:
                 self.rect.size=(self.thickness, self.height)
-                self.rect.pos = [(self.width - self.thickness)/2.0, 0]
+                self.rect.pos = [self.x+((self.width - self.thickness)/2.0), self.y]
                 if self.graded:
-                    self.rect.source = 'JogWheel_graded_vertical.jpg'
+                    fpath= os.path.sep.join([bdir,'JogWheel_graded_vertical.jpg'])
+                    self.rect.source = fpath
                 else:
-                    self.rect.source = 'JogWheel_ungraded_vertical.jpg'
+                    fpath= os.path.sep.join([bdir,'JogWheel_ungraded_vertical.jpg'])
+                    self.rect.source = fpath
 
     def __init__(self, *args, **kwargs):
         super(JogWheelRenderer,self).__init__( *args, **kwargs)
+        print("Initializing JogWheel Renderer")
 
         with self.canvas:
             #Color(0.6,0.6,0.6,.7)
@@ -144,13 +160,14 @@ class JogWheelRenderer(Widget ):
 
 
 class JogWheel(JogWheelRenderer, JogWheelBehavior):
-    def on_orientation(self, o, orientation):
-        JogWheelBehavior.on_orientation(self, o, orientation)
+    #def on_orientation(self, o, orientation):
+    #    JogWheelBehavior.on_orientation(self, o, orientation)
+    pass
     
 
 class NumericJogWheel(JogWheelRenderer, NumericJogWheelBehavior):
-    def on_orientation(self, o, orientation):
-        JogWheelBehavior.on_orientation(self, o, orientation)
+    #def on_orientation(self, o, orientation):
+    #    JogWheelBehavior.on_orientation(self, o, orientation)
     pass
 
 
@@ -170,7 +187,7 @@ if __name__ == '__main__':
             j.maximum = 2 
             j.trigger_distance = cm(0.3)
             j.on_jog = updatelbl
-            j.orientation = 'vertical'
+            j.orientation = 'horizontal'
             j.graded = False
                 
             b.add_widget(j)
