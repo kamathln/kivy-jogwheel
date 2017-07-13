@@ -152,7 +152,8 @@ class JogWheelRenderer(Widget ):
         self.bind(size = self.update_dims,
                   pos  = self.update_dims,
                   thickness   = self.update_dims,
-                  orientation = self.update_dims)
+                  orientation = self.update_dims,
+                  graded = self.update_dims)
 
         self.update_dims()
 
