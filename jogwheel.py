@@ -114,7 +114,6 @@ class JogWheelRenderer(Widget ):
     thickness = NumericProperty(cm(0.2))
     graded = BooleanProperty(True)
     def update_dims(self, *args):
-        print "Update_dims:", self.pos, self.size, self.thickness, self.orientation
         inited=True
         try:
             self.rect
@@ -145,7 +144,6 @@ class JogWheelRenderer(Widget ):
 
     def __init__(self, *args, **kwargs):
         super(JogWheelRenderer,self).__init__( *args, **kwargs)
-        print("Initializing JogWheel Renderer")
 
         with self.canvas:
             #Color(0.6,0.6,0.6,.7)
